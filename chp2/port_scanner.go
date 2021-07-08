@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 )
 
@@ -62,13 +63,26 @@ func wait_group_scan() {
 }
 
 func worker(ports chan int, wg *sync.WaitGroup) {
-	fmt.Printf("A")
 	for p := range ports {
 		fmt.Println(p)
 		wg.Done()
 	}
 }
 
+func worker_multi(ports, results chan int) {
+	for p := range ports {
+		address := fmt.Sprintf("scanme.nmap.org:%d", p)
+		conn, err := net.Dial("tcp", address)
+		if err != nil {
+			results <- 0
+			continue
+		}
+		conn.Close()
+		results <- p
+	}
+}
+
+// to avoid inconsistencies with connecting to a lot of ports, use a worker pool
 func improved_wait_group_scan() {
 	ports := make(chan int, 100)
 	var wg sync.WaitGroup
@@ -84,8 +98,49 @@ func improved_wait_group_scan() {
 	wg.Wait()
 	close(ports)
 }
+
+func multi_chan_port_scanner() {
+	fmt.Println("here1")
+	ports := make(chan int, 100)
+	results := make(chan int)
+	var openports []int
+
+	for i := 0; i < cap(ports); i++ {
+		go worker_multi(ports, results)
+	}
+
+	fmt.Println("here2")
+	go func() {
+		for i := 1; i <= 1024; i++ {
+			ports <- i
+		}
+	}()
+
+	fmt.Println("here3")
+	for i := 1; i <= 1000; i++ {
+		fmt.Printf("here3.5 for port %f\n", i)
+		port := <-results
+		fmt.Println("here3.6")
+		if port != 0 {
+			openports = append(openports, port)
+		}
+	}
+
+	fmt.Println("here4")
+	close(ports)
+	close(results)
+	fmt.Println("before sort")
+	fmt.Printf("%v\n", openports)
+	sort.Ints(openports)
+	fmt.Println("after sort")
+	fmt.Printf("%v\n", openports)
+	//for _, port := range openports {
+	// fmt.Printf("%d open\n", port)
+	//}
+}
+
 func main() {
 	// basic_scan()
 	//too_fast_scan()
-	improved_wait_group_scan()
+	multi_chan_port_scanner()
 }
