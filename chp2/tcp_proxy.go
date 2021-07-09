@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
@@ -20,7 +21,7 @@ func (fooWriter *FooWriter) Write(b []byte) (int, error) {
 	return os.Stdout.Write(b)
 }
 
-func main() {
+func sloppy_copy() {
 	var (
 		reader FooReader
 		writer FooWriter
@@ -39,4 +40,23 @@ func main() {
 		log.Fatalln("unable to write data")
 	}
 	fmt.Printf("Wrote %d bytes to stdout\n", s)
+}
+
+func sexy_copy() {
+	var (
+		reader FooReader
+		writer FooWriter
+	)
+
+	fmt.Println("here1")
+	success, err := io.Copy(&writer, &reader)
+	if _, err := io.Copy(&writer, &reader); err != nil {
+		log.Fatalln("unable to read/write data")
+	}
+
+	return
+}
+
+func main() {
+	sexy_copy()
 }
