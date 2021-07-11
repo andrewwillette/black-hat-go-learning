@@ -1,0 +1,15 @@
+package main
+
+import (
+	"net/http"
+)
+
+func get_google_basic() (resp *http.Response) {
+	r1, _ := http.Get("http://www.google.com/robots.txt")
+	defer r1.Body.Close()
+	return r1
+}
+
+func main() {
+	get_google_basic()
+}
